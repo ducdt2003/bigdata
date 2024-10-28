@@ -1,0 +1,85 @@
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.IOException;
+
+public class YearCount {
+
+    public static class YearMapper extends Mapper<Object, Text, Text, IntWritable> {
+        private final static IntWritable count = new IntWritable();
+        private Text year = new Text();
+
+        @Override
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            // Tách dòng thành mảng
+            String[] data = value.toString().split("\\s+");
+            year.set(data[0]); // Lấy năm ở phần tử đầu tiên
+
+            // Duyệt qua các số lượng lớp từ vị trí thứ hai
+            for (int i = 1; i < data.length; i++) {
+                count.set(Integer.parseInt(data[i])); // Chuyển đổi sang số nguyên
+                // Gửi tới reducer nếu số lượng lớp lớn hơn 30
+                if (count.get() > 30) {
+                    context.write(year, count);
+                }
+            }
+        }
+    }
+
+    public static class YearReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+        @Override
+        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+            for (IntWritable val : values) {
+                context.write(key, val); // In ra năm và số lượng lớp
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Kiểm tra số lượng tham số
+        if (args.length != 2) {
+            System.err.println("Usage: YearCount <input path> <output path>");
+            System.exit(-1);
+        }
+
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "Year Count");
+
+        job.setJarByClass(YearCount.class);
+        job.setMapperClass(YearMapper.class);
+        job.setReducerClass(YearReducer.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
+
+        // Đường dẫn đầu vào và đầu ra
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+
+
+
+
+
+hadoop fs -mkdir -p /user/hadoop/input
+hadoop fs -put sample.txt /user/hadoop/input/
+
+
+
+mvn clean package
+
+
+hadoop jar target/your-jar-file.jar YearCount /user/hadoop/input/sample.txt /user/hadoop/output/
+
+hadoop fs -cat /user/hadoop/output/part-*
