@@ -1,0 +1,100 @@
+javac -classpath $(hadoop classpath) -d . ElectricityConsumption.java
+
+
+jar -cvf ElectricityConsumption.jar *.class
+
+
+hadoop fs -mkdir -p /user/cloudera/input
+hadoop fs -put /path/to/local/input/file /user/cloudera/input
+
+
+hadoop jar ElectricityConsumption.jar ElectricityConsumption /user/cloudera/input /user/hadoop/output
+
+
+
+
+hadoop fs -ls /user/hadoop/output
+hadoop fs -cat /user/hadoop/output/part-r-00000
+
+
+
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+// Lớp Mapper
+public class ElectricityConsumption {
+
+    public static class ElectricityMapper extends Mapper<LongWritable, Text, Text, Text> {
+        @Override
+        protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+            // Chuyển từng dòng thành chuỗi
+            String line = value.toString();
+            
+            // Bỏ qua dòng trống
+            if (line.isEmpty()) {
+                return;
+            }
+
+            // Tách các giá trị theo khoảng trắng
+            String[] fields = line.split("\\s+");
+
+            // Lấy năm và mức tiêu thụ trung bình
+            String year = fields[0];
+            String avgConsumption = fields[fields.length - 1];  // giá trị cuối cùng là mức trung bình
+
+            // Phát ra (năm, mức tiêu thụ trung bình)
+            context.write(new Text(year), new Text(avgConsumption));
+        }
+    }
+
+    // Lớp Reducer
+    public static class ElectricityReducer extends Reducer<Text, Text, Text, Text> {
+
+        @Override
+        protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            // Mỗi năm chỉ có một giá trị mức tiêu thụ trung bình, vì vậy lấy giá trị đó
+            for (Text value : values) {
+                // Chuyển đổi giá trị mức tiêu thụ trung bình thành số thực
+                double avgConsumption = Double.parseDouble(value.toString());
+
+                // Nếu mức tiêu thụ trung bình > 30, phát ra kết quả
+                if (avgConsumption > 30) {
+                    context.write(key, new Text(value));
+                }
+            }
+        }
+    }
+
+    // Lớp Driver
+    public static void main(String[] args) throws Exception {
+        // Tạo một job mới
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "electricity consumption");
+
+        // Đặt lớp Driver, Mapper và Reducer
+        job.setJarByClass(ElectricityConsumption.class);
+        job.setMapperClass(ElectricityMapper.class);
+        job.setReducerClass(ElectricityReducer.class);
+
+        // Định nghĩa kiểu đầu ra cho Mapper và Reducer
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        // Định nghĩa file input và output
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        // Chạy job và đợi hoàn thành
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+
