@@ -1,0 +1,156 @@
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.IOException;
+
+public class YearCount {
+
+    public static class YearMapper extends Mapper<Object, Text, Text, IntWritable> {
+        private final static IntWritable count = new IntWritable();
+        private Text year = new Text();
+
+        @Override
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            String[] data = value.toString().split("\\s+");
+            year.set(data[0]); // Lấy năm
+
+            for (int i = 1; i < data.length; i++) {
+                count.set(Integer.parseInt(data[i])); // Chuyển đổi sang số nguyên
+                if (count.get() > 30) {
+                    context.write(year, count); // Gửi tới reducer
+                }
+            }
+        }
+    }
+
+    public static class YearReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+        @Override
+        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+            for (IntWritable val : values) {
+                context.write(key, val); // In ra năm và số lượng lớp
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 2) {
+            System.err.println("Usage: YearCount <input path> <output path>");
+            System.exit(-1);
+        }
+
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "Year Count");
+
+        job.setJarByClass(YearCount.class);
+        job.setMapperClass(YearMapper.class);
+        job.setReducerClass(YearReducer.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
+
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+
+
+
+
+
+
+hadoop fs -mkdir -p /user/hadoop/input
+hadoop fs -put sample.txt /user/hadoop/input/
+
+
+
+mvn clean package
+
+
+hadoop jar target/your-jar-file.jar YearCount /user/hadoop/input/sample.txt /user/hadoop/output/
+
+hadoop fs -cat /user/hadoop/output/part-*
+
+
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.IOException;
+
+public class ElectricityAverage {
+
+    // Mapper class
+    public static class TokenizerMapper extends Mapper<Object, Text, Text, IntWritable> {
+
+        private final static IntWritable consumptionValue = new IntWritable();
+        private Text year = new Text();
+
+        // Map function: đọc từng dòng đầu vào
+        public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            // Dữ liệu mỗi dòng: "1979 23 23 2 43 24 25 26 26 26 26 25 26"
+            String[] tokens = value.toString().split("\\s+");
+            year.set(tokens[0]); // Năm (key)
+
+            // Gửi từng giá trị tiêu thụ của các tháng tới Reducer
+            for (int i = 1; i < tokens.length; i++) {
+                consumptionValue.set(Integer.parseInt(tokens[i])); // Giá trị tiêu thụ từng tháng
+                context.write(year, consumptionValue);
+            }
+        }
+    }
+
+    // Reducer class
+    public static class IntSumReducer extends Reducer<Text, IntWritable, Text, DoubleWritable> {
+        private DoubleWritable result = new DoubleWritable();
+
+        // Reduce function: tính trung bình tiêu thụ điện
+        public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+            int sum = 0;
+            int count = 0;
+            for (IntWritable val : values) {
+                sum += val.get();
+                count++;
+            }
+            double average = (double) sum / count;
+
+            // Chỉ ghi kết quả nếu trung bình > 30
+            if (average > 30) {
+                result.set(average);
+                context.write(key, result);
+            }
+        }
+    }
+
+    // Hàm chính
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "electricity average");
+        job.setJarByClass(ElectricityAverage.class);
+        job.setMapperClass(TokenizerMapper.class);
+        job.setCombinerClass(IntSumReducer.class);
+        job.setReducerClass(IntSumReducer.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
