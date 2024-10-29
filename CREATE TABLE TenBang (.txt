@@ -1,0 +1,8 @@
+CREATE TABLE TenBang (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ten VARCHAR(50) NOT NULL,
+    tuoi INT,
+    dia_chi VARCHAR(100),
+    email VARCHAR(50) UNIQUE,
+    ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
