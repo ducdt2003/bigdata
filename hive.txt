@@ -1,26 +1,26 @@
-SELECT * FROM customers
+SELECT * FROM customer_2121050184
 WHERE age > 30;
 
-SELECT * FROM products
+SELECT * FROM product_2121050184
 WHERE price > 500;
 
-
 SELECT SUM(s.quantity * p.price) AS total_revenue
-FROM sales s
-JOIN products p ON s.product_id = p.product_id;
+FROM sales_2121050184 s
+JOIN product_2121050184 p ON s.product_id = p.product_id;
 
 
 SELECT c.city, SUM(s.quantity * p.price) AS revenue_by_city
-FROM sales s
-JOIN products p ON s.product_id = p.product_id
-JOIN customers c ON s.customer_id = c.customer_id
+FROM sales_2121050184 s
+JOIN product_2121050184 p ON s.product_id = p.product_id
+JOIN customer_2121050184 c ON s.customer_id = c.customer_id
 GROUP BY c.city;
 
 
+
 SELECT c.customer_id, c.name, SUM(s.quantity * p.price) AS total_spent
-FROM sales s
-JOIN products p ON s.product_id = p.product_id
-JOIN customers c ON s.customer_id = c.customer_id
+FROM sales_2121050184 s
+JOIN product_2121050184 p ON s.product_id = p.product_id
+JOIN customer_2121050184 c ON s.customer_id = c.customer_id
 GROUP BY c.customer_id, c.name
 ORDER BY total_spent DESC
 LIMIT 1;
