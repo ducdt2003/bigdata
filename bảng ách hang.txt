@@ -1,0 +1,77 @@
+bảng ách hang 
+
+-- Tạo bảng customers trong Hive
+CREATE TABLE customers (
+    customer_id INT,
+    name STRING,
+    age INT,
+    city STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+
+INSERT INTO TABLE customers VALUES
+(1, 'John Doe', 28, 'New York'),
+(2, 'Jane Smith', 34, 'Los Angeles'),
+(3, 'Robert Brown', 45, 'Chicago'),
+(4, 'Michael Johnson', 25, 'Houston');
+
+
+
+SELECT * FROM customers;
+
+
+
+
+product
+
+-- Tạo bảng products trong Hive
+CREATE TABLE products (
+    product_id INT,
+    product_name STRING,
+    price FLOAT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+
+
+INSERT INTO TABLE products VALUES
+(101, 'Laptop', 800),
+(102, 'Smartphone', 600),
+(103, 'Tablet', 300),
+(104, 'Smartwatch', 200);
+
+
+SELECT * FROM products;
+
+
+
+
+sales 
+CREATE TABLE sales (
+    transaction_id INT,
+    customer_id INT,
+    product_id INT,
+    quantity INT,
+    transaction_date DATE
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+
+
+
+INSERT INTO TABLE sales VALUES
+(1001, 1, 101, 2, '2024-01-10'),
+(1002, 2, 102, 1, '2024-02-12'),
+(1003, 3, 103, 3, '2024-03-15'),
+(1004, 1, 104, 1, '2024-04-18'),
+(1012, 1, 102, 1, '2024-04-20'),
+(1013, 3, 102, 2, '2024-01-30'),
+(1014, 2, 101, 1, '2024-02-10');
+
